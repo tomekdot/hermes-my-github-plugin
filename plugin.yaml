@@ -1,42 +1,16 @@
 name: my-github
-description: Dashboard + statusbar plugin that lists your GitHub repositories (public + private) via the GitHub REST API or the `gh` CLI. Includes a statusbar chip, a palette command, and a dashboard tab.
-version: 1.2.0
 repo: https://github.com/tomekdot/hermes-my-github-plugin
-pin:
-  sha: 7f852b8acd34c94cef0b2d7d95b9e98309e6d2f3
-  # v1.2.0 tag (0da0ee2... is the annotated tag object, not the commit — pinned to the commit that tag points to)
-subdir: dashboard
-capabilities: []
-docs: >
-  The plugin ships two halves:
-
-  - **Desktop half** (`plugin.js`) — a statusbar chip and a palette command
-    ("GitHub: View repositories") that open a modal listing all repos. Standalone;
-    fetches directly from GitHub REST API, no Python backend required. Private
-    repos need a token set via `GITHUB_TOKEN` on the Hermes gateway.
-  - **Dashboard half** (`dashboard/`) — a dashboard tab with a searchable,
-    filterable, sortable repo table plus summary stats. Requires the `gh` CLI
-    to be authenticated (`gh auth login`) since the Python backend shells out
-    to `gh api`.
-
-  Prerequisites:
-
-  - Hermes Agent installed and running
-  - For the dashboard half: GitHub CLI (`gh`) authenticated
-
-  Install the dashboard half by copying `dashboard/` to
-  `~/.hermes/plugins/my-github/dashboard/`, then rescan plugins at
-  `http://127.0.0.1:9119/api/dashboard/plugins/rescan` or restart Hermes.
-
-  Install the desktop half by copying `plugin.js` to
-  `~/.hermes/desktop-plugins/my-github/plugin.js`. It loads automatically
-  within a few seconds.
-
-  License: MIT
-license: MIT
-tags:
-  - github
-  - repos
-  - statusbar
-  - dashboard
-  - git
+sha: 7f852b8acd34c94cef0b2d7d95b9e98309e6d2f3
+description: Dashboard and statusbar plugin that lists your GitHub repositories (public and
+  private) via the GitHub REST API or the gh CLI. Includes a statusbar chip, a palette command,
+  and a dashboard tab.
+maintainer: tomekdot
+tier: community
+category: desktop
+docs_url: https://github.com/tomekdot/hermes-my-github-plugin#readme
+platforms: []
+capabilities:
+  provides_tools: []
+  provides_hooks: []
+  provides_middleware: []
+  requires_env: []
