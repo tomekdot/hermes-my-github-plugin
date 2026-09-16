@@ -1,0 +1,14 @@
+{
+  "name": "my-github",
+  "label": "My GitHub",
+  "description": "Lists and opens your GitHub repositories (public + private) via the gh CLI.",
+  "icon": "Github",
+  "version": "1.1.0",
+  "tab": {
+    "path": "/my-github",
+    "position": "after:skills"
+  },
+  "entry": "dist/index.js",
+  "css": "dist/style.css",
+  "api": "plugin_api.py"
+}

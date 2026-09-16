@@ -1,0 +1,75 @@
+/*
+ * My GitHub — dashboard plugin styles.
+ *
+ * All colors reference theme CSS vars so the plugin reskins with
+ * the active dashboard theme. No hardcoded palette.
+ */
+
+.hermes-my-github {
+  width: 100%;
+}
+
+/* Tabela */
+.my-github-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* Sticky kolumna Action po prawej */
+.my-github-table th:last-child,
+.my-github-table td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 10;
+  background: var(--ui-bg, #1a1a1a);
+  box-shadow: -2px 0 6px rgba(0, 0, 0, 0.25);
+}
+
+.my-github-table th:last-child {
+  background: var(--ui-bg-secondary, #252525);
+  z-index: 11;
+}
+
+/* Ucięcie długich opisów */
+.my-github-desc {
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Kontener tabeli – wymuszony zawsze widoczny pasek */
+.my-github-scroll {
+  overflow-x: scroll;
+  overflow-y: auto;
+  max-height: 75vh;
+  border-radius: 0.5rem;
+  border: 1px solid var(--ui-border, #333);
+  scrollbar-width: auto;
+}
+
+/* Wymuszenie widocznego paska na Webkit (Chrome/Edge) */
+.my-github-scroll::-webkit-scrollbar {
+  height: 10px;
+  background: transparent;
+}
+
+.my-github-scroll::-webkit-scrollbar-thumb {
+  background: var(--ui-border, #555);
+  border-radius: 5px;
+  min-width: 40px;
+}
+
+.my-github-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--ui-text-tertiary, #888);
+}
+
+.my-github-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Grab cursor */
+.my-github-scroll.cursor-grabbing {
+  cursor: grabbing;
+  user-select: none;
+}
