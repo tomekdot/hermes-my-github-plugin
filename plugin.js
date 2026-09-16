@@ -4,10 +4,6 @@
  * Backend half lives in plugins/my-github/dashboard/plugin_api.py (gh CLI).
  * This is v1.1: richer rows (language, stars, forks, issues, pushed time),
  * visibility filter, sort control, summary header, manual refresh.
- *
- * NOTE: `ctx` is passed into `register(ctx)` by the host — NOT imported from
- * '@hermes/plugin-sdk'. We deliberately avoid useQuery (tanstack) because the
- * plugin renders outside the app's QueryClientProvider; a plain effect is safe.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -72,7 +68,7 @@ function Stat({ label, value }) {
     children: [
       jsx('span', {
         className: 'text-sm font-semibold text-(--ui-text)',
-        children: String(value),
+        children: String(value ?? 0),
       }),
       jsx('span', {
         className: 'text-[10px] uppercase tracking-wide text-(--ui-text-tertiary)',
@@ -125,28 +121,30 @@ function RepoRow({ repo, onOpen }) {
                     children: 'archived',
                   })
                 : null,
-          jsxs('span', {
-            className: 'flex items-center gap-1.5 shrink-0',
-            children: [
-              jsx('span', {
-                className: 'text-[10px] uppercase tracking-wide text-(--ui-text-tertiary)',
-                children: `★ ${repo.stargazers_count || 0}`,
-              }),
-              jsx('span', {
-                className: 'text-[10px] uppercase tracking-wide text-(--ui-text-tertiary)',
-                children: `⑂ ${repo.forks_count || 0}`,
+              jsxs('span', {
+                className: 'flex items-center gap-1.5 shrink-0 ml-auto',
+                children: [
+                  jsx('span', {
+                    className: 'text-[10px] uppercase tracking-wide text-(--ui-text-tertiary)',
+                    children: `★ ${repo.stargazers_count || 0}`,
+                  }),
+                  jsx('span', {
+                    className: 'text-[10px] uppercase tracking-wide text-(--ui-text-tertiary)',
+                    children: `⑂ ${repo.forks_count || 0}`,
+                  }),
+                ],
               }),
             ],
-          })
+          }),
+          repo.description
+            ? jsx('div', {
+                className:
+                  'text-xs text-(--ui-text-tertiary) break-words whitespace-normal mt-0.5 leading-snug',
+                children: repo.description,
+              })
+            : null,
         ],
       }),
-      repo.description
-        ? jsx('div', {
-            className:
-              'text-xs text-(--ui-text-tertiary) break-words whitespace-normal mt-0.5 leading-snug',
-            children: repo.description,
-          })
-        : null,
     },
     repo.full_name || repo.name,
   )
@@ -162,11 +160,11 @@ const SORTS = [
 
 function RepoList({ repos, onOpen, onClose, refetch, sort, setSort }) {
   const [q, setQ] = useState('')
-  const [vis, setVis] = useState('all') // all | public | private
+  const [vis, setVis] = useState('all')
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase()
-    const rows = repos.filter((r) => {
+    const rows = (repos || []).filter((r) => {
       if (vis !== 'all' && Boolean(r.private) !== (vis === 'private')) return false
       if (!s) return true
       return (
@@ -225,7 +223,7 @@ function RepoList({ repos, onOpen, onClose, refetch, sort, setSort }) {
           }),
           jsx('select', {
             value: sort,
-            onChange: (e) => setSort(e.target.value),
+            onChange: (e) => setSort?.(e.target.value),
             className:
               'rounded px-1.5 py-0.5 text-xs bg-(--ui-input) text-(--ui-text) border border-(--ui-border) outline-none',
             children: SORTS.map(([v, label]) =>
@@ -255,7 +253,7 @@ function RepoList({ repos, onOpen, onClose, refetch, sort, setSort }) {
       }),
       jsx('div', {
         className: 'px-2 py-1 text-[11px] text-(--ui-text-tertiary) border-t border-(--ui-border)',
-        children: `${filtered.length} of ${repos.length} repositories`,
+        children: `${filtered.length} of ${(repos || []).length} repositories`,
       }),
     ],
   })
@@ -263,7 +261,7 @@ function RepoList({ repos, onOpen, onClose, refetch, sort, setSort }) {
 
 function Chip({ ctx }) {
   const [open, setOpen] = useState(false)
-  const { repos, summary, isLoading, isError, error, refetch } = useGithub(ctx)
+  const { repos, summary, sort, setSort, isLoading, isError, error, refetch } = useGithub(ctx)
 
   useEffect(() => {
     const onOpen = () => setOpen(true)
@@ -286,6 +284,8 @@ function Chip({ ctx }) {
     [ctx],
   )
 
+  const isForbidden = error?.status === 403 || error?.statusCode === 403
+
   return jsxs(Fragment, {
     children: [
       jsx('button', {
@@ -295,16 +295,13 @@ function Chip({ ctx }) {
         className:
           'inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs text-(--ui-text-tertiary) hover:bg-(--ui-hover) hover:text-(--ui-text)',
         children: jsxs(Fragment, {
-     children: [
-       jsx('span', {
-         className: 'text-sm',
-         children: '★',
-       }),
-       jsx('span', {
-         children: summary ? `${summary.login} · ${summary.total}` : 'GitHub',
-       }),
-     ],
-   }),
+          children: [
+            jsx('span', { className: 'text-sm', children: '★' }),
+            jsx('span', {
+              children: summary ? `${summary.login} · ${summary.total}` : 'GitHub',
+            }),
+          ],
+        }),
       }),
       jsx(Dialog, {
         open,
@@ -332,7 +329,8 @@ function Chip({ ctx }) {
               }),
               summary
                 ? jsxs('div', {
-                    className: 'flex items-center justify-center divide-x divide-(--ui-border) rounded border border-(--ui-border) py-1.5',
+                    className:
+                      'flex items-center justify-center divide-x divide-(--ui-border) rounded border border-(--ui-border) py-1.5',
                     children: [
                       jsx(Stat, { label: 'repos', value: summary.total }),
                       jsx(Stat, { label: 'stars', value: summary.total_stars }),
@@ -351,29 +349,29 @@ function Chip({ ctx }) {
                       className: 'px-1 py-6 text-center text-sm',
                       children: [
                         jsx('div', {
-                          className: 'text-(--ui-error)',
-                          children: 'Failed to load repositories.',
+                          className: 'text-(--ui-error) font-medium',
+                          children: isForbidden
+                            ? 'GitHub API 403 Forbidden (Rate Limit / Missing Token)'
+                            : 'Failed to load repositories.',
                         }),
-                        jsx('pre', {
-                          className:
-                            'mt-2 text-left text-xs text-(--ui-text-tertiary) whitespace-pre-wrap break-words max-h-40 overflow-auto',
-                          children: (() => {
-                            if (!error) return 'Unknown error'
-                            const status = error?.status || error?.statusCode
-                            const detail = error?.detail || error?.message || String(error)
-                            return `status: ${status ?? 'n/a'}\n${detail}`
-                          })(),
+                        jsx('div', {
+                          className: 'mt-2 text-xs text-(--ui-text-tertiary)',
+                          children: isForbidden
+                            ? 'Please configure GITHUB_TOKEN in ~/.hermes/.env or authenticate with `gh auth login`.'
+                            : String(error?.detail || error?.message || 'Check terminal / gateway logs.'),
                         }),
                         jsx('button', {
                           type: 'button',
                           onClick: () => refetch(),
-                          className: 'mt-2 underline',
+                          className: 'mt-3 text-xs underline text-(--ui-accent)',
                           children: 'Try again',
                         }),
                       ],
                     })
                   : jsx(RepoList, {
                       repos,
+                      sort,
+                      setSort,
                       onOpen: openRepo,
                       onClose: () => setOpen(false),
                       refetch,
