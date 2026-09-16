@@ -39,6 +39,7 @@
       ),
       h("td", { className: "p-3 text-(--ui-text-tertiary)" }, repo.language || "—"),
       h("td", { className: "p-3 text-(--ui-text)" }, `★ ${repo.stargazers_count || 0}`),
+      h("td", { className: "p-3 text-(--ui-text)" }, `⑂ ${repo.forks_count || 0}`),
       h("td", { className: "p-3 text-(--ui-text-tertiary)" }, fmtDate(repo.pushed_at)),
       h("td", { className: "p-3 text-right" },
         h("button", {
@@ -57,6 +58,7 @@
     const [error, setError] = useState(null);
     const [vis, setVis] = useState("all");
     const [q, setQ] = useState("");
+    const [sort, setSort] = useState("pushed");
     const scrollRef = useRef(null);
 
     const getAuthHeaders = () => {
@@ -143,7 +145,7 @@
 
     const filtered = useMemo(() => {
       const s = q.trim().toLowerCase();
-      return repos.filter((r) => {
+      const rows = repos.filter((r) => {
         if (vis === "public" && r.private) return false;
         if (vis === "private" && !r.private) return false;
         if (!s) return true;
@@ -153,7 +155,16 @@
           (r.language && r.language.toLowerCase().includes(s))
         );
       });
-    }, [repos, q, vis]);
+      const by = {
+        pushed: (a, b) => String(b.pushed_at || "").localeCompare(String(a.pushed_at || "")),
+        stars: (a, b) => (b.stargazers_count || 0) - (a.stargazers_count || 0),
+        forks: (a, b) => (b.forks_count || 0) - (a.forks_count || 0),
+        name: (a, b) => String(a.name || "").localeCompare(String(b.name || "")),
+        created: (a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")),
+      };
+      rows.sort(by[sort] || by.pushed);
+      return rows;
+    }, [repos, q, vis, sort]);
 
     const openRepo = (url) => {
       if (url && typeof window !== "undefined") {
@@ -198,6 +209,17 @@
               className: `px-3 py-1.5 capitalize transition ${vis === v ? "bg-(--ui-accent) text-(--ui-accent-foreground)" : "text-(--ui-text-tertiary) hover:bg-(--ui-hover)"}`
             }, v)
           )
+        ),
+        h("select", {
+          value: sort,
+          onChange: (e) => setSort(e.target.value),
+          className: "px-3 py-1.5 rounded border border-(--ui-border) bg-(--ui-bg-input) text-(--ui-text) text-sm"
+        },
+          h("option", { value: "pushed" }, "Last pushed"),
+          h("option", { value: "stars" }, "Most stars"),
+          h("option", { value: "forks" }, "Most forks"),
+          h("option", { value: "created" }, "Newest"),
+          h("option", { value: "name" }, "Name A–Z")
         )
       ),
 
@@ -213,6 +235,7 @@
               h("th", { className: "p-3" }, "Visibility"),
               h("th", { className: "p-3" }, "Language"),
               h("th", { className: "p-3" }, "Stars"),
+              h("th", { className: "p-3" }, "Forks"),
               h("th", { className: "p-3" }, "Pushed"),
               h("th", { className: "p-3 text-right" }, "Action")
             )

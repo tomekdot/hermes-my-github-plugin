@@ -7,7 +7,7 @@ A dashboard plugin for [Hermes Agent](https://hermes-agent.nousresearch.com/) th
 - **Full repo list** — paginates up to 500 repos owned by your account
 - **Summary stats** — total repos, stars, open issues, forks
 - **Search & filter** — fuzzy search by name/description/language; filter by visibility (all/public/private)
-- **Sort** — by last pushed (default), stars, name, or created date
+- **Sort** — by last pushed (default), stars, forks, creation date, or name
 - **Theme-aware** — uses CSS variables, reskins with your active dashboard theme
 - **60-second cache** — avoids hammering the `gh` API on every render
 
