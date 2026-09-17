@@ -1,16 +1,11 @@
 name: my-github
-repo: https://github.com/tomekdot/hermes-my-github-plugin
-sha: 7f852b8acd34c94cef0b2d7d95b9e98309e6d2f3
-description: Dashboard and statusbar plugin that lists your GitHub repositories (public and
-  private) via the GitHub REST API or the gh CLI. Includes a statusbar chip, a palette command,
-  and a dashboard tab.
-maintainer: tomekdot
-tier: community
-category: desktop
-docs_url: https://github.com/tomekdot/hermes-my-github-plugin#readme
-platforms: []
-capabilities:
-  provides_tools: []
-  provides_hooks: []
-  provides_middleware: []
-  requires_env: []
+version: 1.2.1
+manifest_version: 1
+kind: standalone
+description: GitHub repository browser with a desktop statusbar chip, palette command, and dashboard tab using the authenticated gh CLI.
+author: tomekdot
+license: MIT
+homepage: https://github.com/tomekdot/hermes-my-github-plugin
+capabilities: []
+requires_env: []
+python_dependencies: []

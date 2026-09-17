@@ -18,10 +18,24 @@ A dashboard plugin for [Hermes Agent](https://hermes-agent.nousresearch.com/) th
 
 ## Installation
 
-Copy the `dashboard/` folder to your Hermes plugins directory:
+Install the complete package from the repository (catalog submission is pending):
 
+```sh
+hermes plugins install tomekdot/hermes-my-github-plugin --enable
 ```
-~/.hermes/plugins/my-github/dashboard/
+
+For a reproducible install, append `--ref <full-40-character-commit-SHA>`.
+Restart the dashboard/gateway if it is already running. Enable the desktop half in
+Settings → Plugins to show the statusbar chip and the **GitHub: View repositories**
+palette command. The dashboard also provides a **My GitHub** tab.
+
+Package layout:
+
+```text
+plugin.yaml
+desktop/
+└── plugin.js
+dashboard/
 ├── dist/
 │   ├── index.js
 │   └── style.css
@@ -29,13 +43,10 @@ Copy the `dashboard/` folder to your Hermes plugins directory:
 └── plugin_api.py
 ```
 
-Then rescan plugins:
+Keep both `desktop/` and `dashboard/`: the desktop UI uses the dashboard backend.
+No self-updater is included. Catalog updates require a reviewed SHA-bump PR.
 
-```
-http://127.0.0.1:9119/api/dashboard/plugins/rescan
-```
-
-Or restart Hermes. The plugin appears as a new tab **My GitHub** in the dashboard sidebar.
+Validate a checkout with `hermes plugins validate .`.
 
 ## How it works
 
