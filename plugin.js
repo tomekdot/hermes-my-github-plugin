@@ -1,9 +1,8 @@
 /**
  * My GitHub — desktop plugin (UI half).
  *
- * Backend half lives in plugins/my-github/dashboard/plugin_api.py (gh CLI).
- * This is v1.1: richer rows (language, stars, forks, issues, pushed time),
- * visibility filter, sort control, summary header, manual refresh.
+ * Modern minimalist UI: borderless clean stats grid, borderless inputs,
+ * smooth rounded highlights, and fast filters: all | pub | priv | fork.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -24,6 +23,7 @@ const fmtDate = (iso) => {
   if (days <= 0) return 'today'
   if (days === 1) return 'yesterday'
   if (days < 30) return `${days}d ago`
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`
   return d.toISOString().slice(0, 10)
 }
 
@@ -62,16 +62,20 @@ function useGithub(ctx) {
   return { ...data, summary, sort, setSort, isLoading, isError, error, refetch: load }
 }
 
-function Stat({ label, value }) {
+function Stat({ label, value, icon }) {
   return jsxs('div', {
-    className: 'flex flex-col items-center px-3',
+    className:
+      'flex flex-col items-center justify-center py-2 px-3 rounded-lg bg-(--ui-input)/40 hover:bg-(--ui-input)/70 transition-colors',
     children: [
-      jsx('span', {
-        className: 'text-sm font-semibold text-(--ui-text)',
-        children: String(value ?? 0),
+      jsxs('span', {
+        className: 'text-base font-bold text-(--ui-text) flex items-center gap-1',
+        children: [
+          icon ? jsx('span', { className: 'text-xs text-(--ui-text-tertiary)', children: icon }) : null,
+          String(value ?? 0),
+        ],
       }),
       jsx('span', {
-        className: 'text-[10px] uppercase tracking-wide text-(--ui-text-tertiary)',
+        className: 'text-[10px] font-medium uppercase tracking-wider text-(--ui-text-tertiary) mt-0.5',
         children: label,
       }),
     ],
@@ -85,7 +89,7 @@ function RepoRow({ repo, onOpen }) {
       type: 'button',
       onClick: () => onOpen(repo.html_url),
       className:
-        'w-full min-w-0 text-left px-2 py-2 flex items-center gap-2 hover:bg-(--ui-hover) border-b border-(--ui-border-subtle)',
+        'w-full min-w-0 text-left px-3 py-2.5 rounded-lg flex items-start gap-3 transition-colors duration-150 hover:bg-(--ui-hover) group cursor-pointer',
       children: jsxs('div', {
         className: 'min-w-0 flex-1',
         children: [
@@ -93,45 +97,58 @@ function RepoRow({ repo, onOpen }) {
             className: 'flex items-center gap-2 min-w-0 flex-wrap',
             children: [
               jsx('span', {
-                className: 'font-medium text-(--ui-text) break-words',
+                className:
+                  'font-medium text-[13px] text-(--ui-text) group-hover:text-(--ui-accent) transition-colors break-words',
                 children: repo.name,
               }),
               repo.private
                 ? jsx('span', {
                     className:
-                      'text-[10px] uppercase tracking-wide text-(--ui-warning) shrink-0',
+                      'text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400/90 border border-amber-500/20 shrink-0 leading-none',
                     children: 'private',
                   })
                 : jsx('span', {
                     className:
-                      'text-[10px] uppercase tracking-wide text-(--ui-text-tertiary) shrink-0',
+                      'text-[10px] font-medium px-1.5 py-0.5 rounded bg-zinc-800/80 text-zinc-400 border border-zinc-700/50 shrink-0 leading-none',
                     children: 'public',
                   }),
               repo.fork
                 ? jsx('span', {
                     className:
-                      'text-[10px] uppercase tracking-wide text-(--ui-text-tertiary) shrink-0',
+                      'text-[10px] font-medium px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400/90 border border-purple-500/20 shrink-0 leading-none',
                     children: 'fork',
                   })
                 : null,
               repo.archived
                 ? jsx('span', {
                     className:
-                      'text-[10px] uppercase tracking-wide text-(--ui-text-tertiary) shrink-0',
+                      'text-[10px] font-medium px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500 shrink-0 leading-none',
                     children: 'archived',
                   })
                 : null,
-              jsxs('span', {
-                className: 'flex items-center gap-1.5 shrink-0 ml-auto',
+              jsxs('div', {
+                className: 'flex items-center gap-2.5 shrink-0 ml-auto text-xs text-(--ui-text-tertiary)',
                 children: [
+                  repo.language
+                    ? jsx('span', {
+                        className: 'text-[11px] font-normal text-(--ui-text-tertiary) flex items-center gap-1',
+                        children: repo.language,
+                      })
+                    : null,
                   jsx('span', {
-                    className: 'text-[10px] uppercase tracking-wide text-(--ui-text-tertiary)',
+                    className: 'text-[11px] text-(--ui-text-tertiary)',
                     children: `★ ${repo.stargazers_count || 0}`,
                   }),
                   jsx('span', {
-                    className: 'text-[10px] uppercase tracking-wide text-(--ui-text-tertiary)',
+                    className: 'text-[11px] text-(--ui-text-tertiary)',
                     children: `⑂ ${repo.forks_count || 0}`,
                   }),
+                  repo.pushed_at
+                    ? jsx('span', {
+                        className: 'text-[10px] text-(--ui-text-tertiary) min-w-[50px] text-right',
+                        children: fmtDate(repo.pushed_at),
+                      })
+                    : null,
                 ],
               }),
             ],
@@ -139,7 +156,7 @@ function RepoRow({ repo, onOpen }) {
           repo.description
             ? jsx('div', {
                 className:
-                  'text-xs text-(--ui-text-tertiary) break-words whitespace-normal mt-0.5 leading-snug',
+                  'text-xs text-(--ui-text-tertiary) break-words whitespace-normal mt-0.5 leading-snug line-clamp-2',
                 children: repo.description,
               })
             : null,
@@ -160,12 +177,16 @@ const SORTS = [
 
 function RepoList({ repos, onOpen, onClose, refetch, sort, setSort }) {
   const [q, setQ] = useState('')
-  const [vis, setVis] = useState('all')
+  const [vis, setVis] = useState('all') // all | public | private | fork
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase()
     const rows = (repos || []).filter((r) => {
-      if (vis !== 'all' && Boolean(r.private) !== (vis === 'private')) return false
+      // Filtr widoczności oraz forków
+      if (vis === 'public' && r.private) return false
+      if (vis === 'private' && !r.private) return false
+      if (vis === 'fork' && !r.fork) return false
+
       if (!s) return true
       return (
         r.name.toLowerCase().includes(s) ||
@@ -191,10 +212,10 @@ function RepoList({ repos, onOpen, onClose, refetch, sort, setSort }) {
         type: 'button',
         onClick: () => setVis(v),
         className:
-          'rounded px-2 py-0.5 text-xs ' +
+          'rounded px-2 h-full flex items-center text-xs font-medium transition-all ' +
           (vis === v
-            ? 'bg-(--ui-accent) text-(--ui-accent-foreground)'
-            : 'text-(--ui-text-tertiary) hover:bg-(--ui-hover)'),
+            ? 'bg-(--ui-accent) text-(--ui-accent-foreground) shadow-sm'
+            : 'text-(--ui-text-tertiary) hover:text-(--ui-text) hover:bg-(--ui-hover)'),
         children: label,
       },
       v,
@@ -203,10 +224,10 @@ function RepoList({ repos, onOpen, onClose, refetch, sort, setSort }) {
   return jsxs(Fragment, {
     children: [
       jsxs('div', {
-        className: 'flex items-center gap-2 px-2 py-1.5 border-b border-(--ui-border)',
+        className: 'flex items-center gap-2 py-2',
         children: [
           jsx('span', {
-            className: 'text-[10px] uppercase tracking-wide text-(--ui-text-tertiary) shrink-0',
+            className: 'text-[11px] text-(--ui-text-tertiary) shrink-0 pl-1',
             children: '★',
           }),
           jsx('input', {
@@ -215,19 +236,33 @@ function RepoList({ repos, onOpen, onClose, refetch, sort, setSort }) {
             placeholder: 'Search repositories…',
             onChange: (e) => setQ(e.target.value),
             className:
-              'flex-1 min-w-0 bg-(--ui-input) text-(--ui-text) rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-(--ui-ring)',
+              'flex-1 min-w-0 h-[28px] bg-(--ui-input)/60 text-(--ui-text) rounded-md px-2.5 text-xs outline-none focus:ring-1 focus:ring-(--ui-ring) transition-all',
           }),
+          // Pigułka wyboru z nową opcją 'fork'
           jsxs('div', {
-            className: 'flex items-center rounded border border-(--ui-border) p-0.5 shrink-0',
-            children: [visBtn('all', 'all'), visBtn('public', 'pub'), visBtn('private', 'priv')],
+            className: 'flex items-center h-[28px] rounded-md p-0.5 shrink-0 bg-(--ui-input)/60',
+            children: [
+              visBtn('all', 'all'),
+              visBtn('public', 'pub'),
+              visBtn('private', 'priv'),
+              visBtn('fork', 'fork'),
+            ],
           }),
           jsx('select', {
             value: sort,
             onChange: (e) => setSort?.(e.target.value),
             className:
-              'rounded px-1.5 py-0.5 text-xs bg-(--ui-input) text-(--ui-text) border border-(--ui-border) outline-none',
+              'h-[28px] rounded-md px-2 text-xs bg-(--ui-input)/60 text-(--ui-text) outline-none cursor-pointer hover:bg-(--ui-hover) focus:ring-1 focus:ring-(--ui-ring) transition-all',
             children: SORTS.map(([v, label]) =>
-              jsx('option', { value: v, children: label }, v),
+              jsx(
+                'option',
+                {
+                  value: v,
+                  style: { backgroundColor: '#18181b', color: '#ffffff' },
+                  children: label,
+                },
+                v,
+              ),
             ),
           }),
           jsx('button', {
@@ -236,23 +271,23 @@ function RepoList({ repos, onOpen, onClose, refetch, sort, setSort }) {
             onClick: refetch,
             'aria-label': 'Refresh',
             className:
-              'rounded px-2 py-1 text-(--ui-text-tertiary) hover:bg-(--ui-hover) hover:text-(--ui-text) shrink-0',
+              'h-[28px] w-[28px] flex items-center justify-center rounded-md text-xs text-(--ui-text-tertiary) hover:bg-(--ui-hover) hover:text-(--ui-text) bg-(--ui-input)/60 shrink-0 transition-colors',
             children: '↻',
           }),
         ],
       }),
       jsx('div', {
-        className: 'overflow-y-auto overflow-x-hidden max-h-[65vh]',
+        className: 'overflow-y-auto overflow-x-hidden max-h-[62vh] py-1 flex flex-col gap-0.5',
         children:
           filtered.length === 0
             ? jsx('div', {
-                className: 'px-3 py-6 text-center text-(--ui-text-tertiary) text-sm',
+                className: 'px-3 py-10 text-center text-(--ui-text-tertiary) text-sm',
                 children: 'No repositories match.',
               })
             : filtered.map((repo) => jsx(RepoRow, { repo, onOpen }, repo.full_name || repo.name)),
       }),
       jsx('div', {
-        className: 'px-2 py-1 text-[11px] text-(--ui-text-tertiary) border-t border-(--ui-border)',
+        className: 'px-2 pt-2 text-[11px] text-(--ui-text-tertiary) border-t border-(--ui-border-subtle)/40',
         children: `${filtered.length} of ${(repos || []).length} repositories`,
       }),
     ],
@@ -293,7 +328,7 @@ function Chip({ ctx }) {
         title: 'View repositories',
         onClick: () => setOpen((o) => !o),
         className:
-          'inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs text-(--ui-text-tertiary) hover:bg-(--ui-hover) hover:text-(--ui-text)',
+          'inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs text-(--ui-text-tertiary) hover:bg-(--ui-hover) hover:text-(--ui-text) transition-colors',
         children: jsxs(Fragment, {
           children: [
             jsx('span', { className: 'text-sm', children: '★' }),
@@ -307,14 +342,14 @@ function Chip({ ctx }) {
         open,
         onOpenChange: setOpen,
         children: jsx(DialogContent, {
-          style: { width: '48vw', maxWidth: '90vw' },
+          style: { width: '52vw', maxWidth: '92vw' },
           className:
-            'overflow-x-hidden border border-(--ui-border) rounded-lg shadow-lg bg-(--ui-bg) p-3',
+            'overflow-x-hidden border border-(--ui-border-subtle) rounded-xl shadow-2xl bg-(--ui-bg) p-4',
           children: jsxs('div', {
-            className: 'min-w-0 flex flex-col gap-2',
+            className: 'min-w-0 flex flex-col gap-2.5',
             children: [
               jsx(DialogTitle, {
-                className: 'text-base font-semibold mb-1 flex items-center gap-2',
+                className: 'text-base font-semibold flex items-center gap-2',
                 children: jsxs(Fragment, {
                   children: [
                     'GitHub Repositories',
@@ -329,24 +364,23 @@ function Chip({ ctx }) {
               }),
               summary
                 ? jsxs('div', {
-                    className:
-                      'flex items-center justify-center divide-x divide-(--ui-border) rounded border border-(--ui-border) py-1.5',
+                    className: 'grid grid-cols-4 gap-2 w-full my-1',
                     children: [
                       jsx(Stat, { label: 'repos', value: summary.total }),
-                      jsx(Stat, { label: 'stars', value: summary.total_stars }),
+                      jsx(Stat, { label: 'stars', value: summary.total_stars, icon: '★' }),
                       jsx(Stat, { label: 'issues', value: summary.open_issues }),
-                      jsx(Stat, { label: 'forks of mine', value: summary.forks }),
+                      jsx(Stat, { label: 'forks', value: summary.forks, icon: '⑂' }),
                     ],
                   })
                 : null,
               isLoading
                 ? jsx('div', {
-                    className: 'px-1 py-6 text-center text-(--ui-text-tertiary) text-sm',
-                    children: 'Loading…',
+                    className: 'px-1 py-12 text-center text-(--ui-text-tertiary) text-sm',
+                    children: 'Loading repositories…',
                   })
                 : isError
                   ? jsxs('div', {
-                      className: 'px-1 py-6 text-center text-sm',
+                      className: 'px-1 py-8 text-center text-sm',
                       children: [
                         jsx('div', {
                           className: 'text-(--ui-error) font-medium',
@@ -355,7 +389,7 @@ function Chip({ ctx }) {
                             : 'Failed to load repositories.',
                         }),
                         jsx('div', {
-                          className: 'mt-2 text-xs text-(--ui-text-tertiary)',
+                          className: 'mt-2 text-xs text-(--ui-text-tertiary) max-w-md mx-auto',
                           children: isForbidden
                             ? 'Please configure GITHUB_TOKEN in ~/.hermes/.env or authenticate with `gh auth login`.'
                             : String(error?.detail || error?.message || 'Check terminal / gateway logs.'),
@@ -363,7 +397,7 @@ function Chip({ ctx }) {
                         jsx('button', {
                           type: 'button',
                           onClick: () => refetch(),
-                          className: 'mt-3 text-xs underline text-(--ui-accent)',
+                          className: 'mt-3 text-xs underline text-(--ui-accent) hover:opacity-80',
                           children: 'Try again',
                         }),
                       ],
