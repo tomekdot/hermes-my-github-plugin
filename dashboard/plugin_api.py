@@ -2,12 +2,11 @@
 
 Mounted at /api/plugins/my-github/ by the dashboard plugin system.
 
-Thin wrapper around the `gh` CLI: it is already authenticated as the user
-(the logged-in user), and `gh api` returns both public and private repos owned by the
-logged-in account. We shell out to `gh` rather than calling the GitHub REST
-API directly so we reuse the existing OAuth token and avoid shipping a secret.
+Uses the GitHub REST API via the `gh` CLI (reusing the user's existing OAuth
+token from `gh auth login`) as the primary method. Falls back to GITHUB_TOKEN
+env var if gh is not available or fails.
 
-v1.1: paginates past 100 repos, returns richer per-repo fields
+v1.2: paginates past 100 repos, returns richer per-repo fields
 (stars/forks/issues/language/pushed_at/visibility/fork), caches responses for
 60 s, and adds a /summary endpoint.
 """
@@ -16,8 +15,10 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import subprocess
 import time
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -28,14 +29,27 @@ router = APIRouter()
 _CACHE_TTL = 60.0
 _cache: dict[str, tuple[float, object]] = {}
 
+GITHUB_API = "https://api.github.com"
+
 
 def _run_gh(args: list[str]) -> str:
-    """Run a `gh` subcommand, returning stdout. Raises on non-zero exit."""
+    """Run a `gh` subcommand, returning stdout. Raises on non-zero exit.
+
+    `encoding="utf-8"` is mandatory, not cosmetic. The desktop app launches the
+    backend with `python -I`, which ignores PYTHONUTF8/PYTHONIOENCODING, so
+    `locale.getpreferredencoding()` inside this process is the Windows ANSI code
+    page (cp1250 on a Polish install). With `text=True` and no explicit
+    encoding, subprocess decodes gh's UTF-8 JSON through that code page and
+    every non-ASCII character in a repo description is corrupted
+    ("Koło" -> "KoĹ‚o", "—" -> "â€"). The GitHub REST API is always UTF-8, so
+    pin it here.
+    """
     try:
         proc = subprocess.run(
             ["gh", *args],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=30,
             check=True,
         )
@@ -50,6 +64,55 @@ def _run_gh(args: list[str]) -> str:
     return proc.stdout
 
 
+def _get_gh_token() -> str | None:
+    """Get token from gh CLI."""
+    try:
+        proc = subprocess.run(
+            ["gh", "auth", "token"],
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=10,
+            check=True,
+        )
+        token = proc.stdout.strip()
+        if token:
+            return token
+    except Exception:
+        pass
+    return None
+
+
+def _get_token() -> str | None:
+    """Get a GitHub token: gh CLI first (primary), then env var fallback."""
+    # Primary: gh CLI (reuses existing OAuth token from gh auth login)
+    token = _get_gh_token()
+    if token:
+        return token
+    # Fallback: GITHUB_TOKEN env var
+    token = os.environ.get("GITHUB_TOKEN", "").strip()
+    if token:
+        return token
+    return None
+
+
+def _api_get_gh(path: str, params: dict[str, Any] | None = None) -> Any:
+    """Make an authenticated GET request via gh api, returning parsed JSON."""
+    token = _get_token()
+    if not token:
+        raise HTTPException(status_code=502, detail="No GitHub token available")
+
+    # Build query string
+    if params:
+        query = "&".join(f"{k}={v}" for k, v in params.items())
+        full_path = f"{path}?{query}"
+    else:
+        full_path = path
+
+    out = _run_gh(["api", full_path, "--jq", "."])
+    return json.loads(out)
+
+
 def _cached(key: str, fn):
     hit = _cache.get(key)
     if hit and (time.monotonic() - hit[0]) < _CACHE_TTL:
@@ -59,28 +122,24 @@ def _cached(key: str, fn):
     return value
 
 
-_REPO_JQ = (
-    "[.[] | {"
-    "name, full_name, private, fork, html_url, description, "
-    "language, stargazers_count, forks_count, open_issues_count, "
-    "watchers_count, archived, pushed_at, created_at, updated_at"
-    "}]"
-)
-
-
 def _fetch_all_repos() -> list[dict]:
-    """Fetch every repo owned by the account, following pagination."""
+    """Fetch every repo owned by the account, following pagination via gh API."""
     repos: list[dict] = []
-    for page in range(1, 6):  # up to 500 repos; plenty
-        out = _run_gh([
-            "api",
-            f"user/repos?per_page=100&page={page}&sort=pushed&affiliation=owner",
-            "--jq",
-            _REPO_JQ,
-        ]).strip()
-        batch = json.loads(out) if out else []
+    page = 1
+    while True:
+        batch = _api_get_gh("/user/repos", params={
+            "per_page": 100,
+            "page": page,
+            "sort": "pushed",
+            "affiliation": "owner",
+        })
+        if not batch:
+            break
         repos.extend(batch)
         if len(batch) < 100:
+            break
+        page += 1
+        if page > 5:
             break
     return repos
 
@@ -91,8 +150,9 @@ def get_repos(
 ):
     """Return repositories owned by the logged-in account."""
     def build():
-        login = _login()
+        login = _get_login()
         repos = _fetch_all_repos()
+
         keymap = {
             "stars": lambda r: r.get("stargazers_count", 0),
             "created": lambda r: r.get("created_at") or "",
@@ -100,6 +160,7 @@ def get_repos(
         }
         if sort in keymap:
             repos.sort(key=keymap[sort], reverse=(sort == "stars"))
+
         return {"repos": repos, "login": login, "sort": sort, "count": len(repos)}
 
     return _cached(f"repos:{sort}", build)
@@ -116,7 +177,7 @@ def get_summary():
             if lang:
                 langs[lang] = langs.get(lang, 0) + 1
         return {
-            "login": _login(),
+            "login": _get_login(),
             "total": len(repos),
             "private": sum(1 for r in repos if r.get("private")),
             "public": sum(1 for r in repos if not r.get("private")),
@@ -130,8 +191,10 @@ def get_summary():
     return _cached("summary", build)
 
 
-def _login() -> str:
+def _get_login() -> str:
+    """Get the GitHub login username."""
     try:
-        return _run_gh(["api", "user", "--jq", ".login"]).strip()
+        data = _api_get_gh("/user")
+        return data.get("login", "")
     except Exception:
         return ""

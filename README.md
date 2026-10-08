@@ -41,6 +41,8 @@ dashboard/
 │   └── style.css
 ├── manifest.json
 └── plugin_api.py
+tests/
+└── test_utf8_decoding.py
 ```
 
 Keep both `desktop/` and `dashboard/`: the desktop UI uses the dashboard backend.
@@ -56,6 +58,25 @@ The backend shells out to `gh api` (reusing your existing OAuth token) — no pe
 - `/api/plugins/my-github/summary` — aggregated stats
 
 The frontend renders a searchable, filterable table using React primitives from the Hermes plugin SDK.
+
+## Encoding
+
+Hermes Desktop launches the backend with `python -I`, which ignores
+`PYTHONUTF8` and `PYTHONIOENCODING`. Inside that process
+`locale.getpreferredencoding()` is the Windows ANSI code page — cp1250 on a
+Polish install, cp1252 on a Western one. Every `subprocess.run` that reads a
+UTF-8 stream therefore passes `encoding="utf-8"` (plus `errors="replace"`)
+explicitly. Without it, `gh`'s UTF-8 JSON is decoded through the code page and
+repo descriptions come out as mojibake: `Koło` → `KoĹ‚o`, `—` → `â€`.
+
+Run the regression test the way the backend runs:
+
+```sh
+python -I tests/test_utf8_decoding.py
+```
+
+Section 1 is offline. Section 2 exercises the live HTTP response and is skipped
+when `gh` is not authenticated or `fastapi` is unavailable.
 
 ## License
 
