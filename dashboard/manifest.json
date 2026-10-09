@@ -3,7 +3,7 @@
   "label": "My GitHub",
   "description": "Lists and opens your GitHub repositories (public + private) via the gh CLI.",
   "icon": "Github",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "tab": {
     "path": "/my-github",
     "position": "after:skills"

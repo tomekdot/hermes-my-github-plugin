@@ -391,7 +391,7 @@ function Chip({ ctx }) {
                         jsx('div', {
                           className: 'mt-2 text-xs text-(--ui-text-tertiary) max-w-md mx-auto',
                           children: isForbidden
-                            ? 'Please configure GITHUB_TOKEN in ~/.hermes/.env or authenticate with `gh auth login`.'
+                            ? 'Rate limit reached or the gh CLI is not authenticated. Run `gh auth login` and try again.'
                             : String(error?.detail || error?.message || 'Check terminal / gateway logs.'),
                         }),
                         jsx('button', {
