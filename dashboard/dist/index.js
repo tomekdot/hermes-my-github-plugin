@@ -96,7 +96,7 @@
       load();
     }, [load]);
 
-    // Grab-to-scroll + wheel-to-scroll (bez Shift)
+    // Grab-to-scroll + wheel-to-scroll (no Shift required)
     useEffect(() => {
       const el = scrollRef.current;
       if (!el) return;

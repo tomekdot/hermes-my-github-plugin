@@ -182,7 +182,6 @@ function RepoList({ repos, onOpen, onClose, refetch, sort, setSort }) {
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase()
     const rows = (repos || []).filter((r) => {
-      // Filtr widoczności oraz forków
       if (vis === 'public' && r.private) return false
       if (vis === 'private' && !r.private) return false
       if (vis === 'fork' && !r.fork) return false
@@ -238,7 +237,6 @@ function RepoList({ repos, onOpen, onClose, refetch, sort, setSort }) {
             className:
               'flex-1 min-w-0 h-[28px] bg-(--ui-input)/60 text-(--ui-text) rounded-md px-2.5 text-xs outline-none focus:ring-1 focus:ring-(--ui-ring) transition-all',
           }),
-          // Pigułka wyboru z nową opcją 'fork'
           jsxs('div', {
             className: 'flex items-center h-[28px] rounded-md p-0.5 shrink-0 bg-(--ui-input)/60',
             children: [
