@@ -1,5 +1,5 @@
 name: my-github
-version: 1.2.4
+version: 1.2.5
 manifest_version: 1
 kind: standalone
 description: GitHub repository browser with a desktop statusbar chip, palette command, and dashboard tab using the authenticated gh CLI.
