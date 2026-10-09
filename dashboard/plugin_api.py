@@ -2,11 +2,15 @@
 
 Mounted at /api/plugins/my-github/ by the dashboard plugin system.
 
-Uses the GitHub REST API via the `gh` CLI (reusing the user's existing OAuth
-token from `gh auth login`) as the primary method. Falls back to GITHUB_TOKEN
-env var if gh is not available or fails.
+Uses the GitHub REST API through the `gh` CLI only. `gh api` authenticates
+itself with the credentials from `gh auth login`, so this plugin never reads,
+stores or forwards a token: there is no GITHUB_TOKEN path, and the plugin
+requires `gh` on PATH. Without `gh` on PATH a call surfaces as HTTP 500 from
+_run_gh.
 
-v1.2: paginates past 100 repos, returns richer per-repo fields
+v1.3: drops the unused token plumbing (gh already authenticates), keeps the
+UTF-8 decoding fix, and drops the misleading GITHUB_TOKEN hint from the desktop
+error message. Paginates past 100 repos, returns richer per-repo fields
 (stars/forks/issues/language/pushed_at/visibility/fork), caches responses for
 60 s, and adds a /summary endpoint.
 """
@@ -15,7 +19,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import subprocess
 import time
 from typing import Any
@@ -64,44 +67,8 @@ def _run_gh(args: list[str]) -> str:
     return proc.stdout
 
 
-def _get_gh_token() -> str | None:
-    """Get token from gh CLI."""
-    try:
-        proc = subprocess.run(
-            ["gh", "auth", "token"],
-            capture_output=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=10,
-            check=True,
-        )
-        token = proc.stdout.strip()
-        if token:
-            return token
-    except Exception:
-        pass
-    return None
-
-
-def _get_token() -> str | None:
-    """Get a GitHub token: gh CLI first (primary), then env var fallback."""
-    # Primary: gh CLI (reuses existing OAuth token from gh auth login)
-    token = _get_gh_token()
-    if token:
-        return token
-    # Fallback: GITHUB_TOKEN env var
-    token = os.environ.get("GITHUB_TOKEN", "").strip()
-    if token:
-        return token
-    return None
-
-
 def _api_get_gh(path: str, params: dict[str, Any] | None = None) -> Any:
-    """Make an authenticated GET request via gh api, returning parsed JSON."""
-    token = _get_token()
-    if not token:
-        raise HTTPException(status_code=502, detail="No GitHub token available")
-
+    """GET through `gh api`, returning parsed JSON. `gh` authenticates itself."""
     # Build query string
     if params:
         query = "&".join(f"{k}={v}" for k, v in params.items())
