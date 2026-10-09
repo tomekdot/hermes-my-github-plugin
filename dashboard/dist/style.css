@@ -30,7 +30,7 @@
   z-index: 11;
 }
 
-/* Ucięcie długich opisów */
+/* Clamp long descriptions */
 .my-github-desc {
   max-width: 280px;
   white-space: nowrap;
