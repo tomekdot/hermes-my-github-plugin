@@ -323,14 +323,21 @@ function Chip({ ctx }) {
     children: [
       jsx('button', {
         type: 'button',
-        title: 'View repositories',
+        title: summary
+          ? `GitHub: ${summary.login} · ${summary.total} repositories`
+          : 'View repositories',
         onClick: () => setOpen((o) => !o),
+        // The statusbar is a 20px flex row with overflow-x-clip. Without
+        // shrink-0 + nowrap a crowded bar squeezes this chip until the label
+        // wraps to two lines and the second one gets clipped — the login looks
+        // truncated. Core statusbar items already truncate their labels.
         className:
-          'inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs text-(--ui-text-tertiary) hover:bg-(--ui-hover) hover:text-(--ui-text) transition-colors',
+          'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded px-2 py-0.5 text-xs text-(--ui-text-tertiary) hover:bg-(--ui-hover) hover:text-(--ui-text) transition-colors',
         children: jsxs(Fragment, {
           children: [
-            jsx('span', { className: 'text-sm', children: '★' }),
+            jsx('span', { className: 'text-sm shrink-0', children: '★' }),
             jsx('span', {
+              className: 'truncate',
               children: summary ? `${summary.login} · ${summary.total}` : 'GitHub',
             }),
           ],
