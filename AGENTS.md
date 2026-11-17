@@ -25,6 +25,22 @@ environment variables — authentication comes from `gh auth login`.
   `plugin-catalog/my-github.yaml`. Publishing is a reviewed SHA-bump PR against
   that repo, using the exact 40-character commit SHA on this repo's `main`.
   Tag the release (`vX.Y.Z`) and pin the peeled commit SHA, not the tag object.
+  If the pinned commit changes, move both the tag and the release target.
+
+- Base the catalog PR branch on **current upstream `main`**, never on the local
+  fork's `main`: forks are routinely stale and a fork-based branch produces a
+  conflict in `plugin-catalog/my-github.yaml`. Shallow-fetch upstream with
+  `git fetch --depth=1 --filter=blob:none https://github.com/NousResearch/hermes-agent.git main`,
+  branch from `FETCH_HEAD`, change only `sha:` and `version:`, then check that
+  the PR diff is exactly those two lines and reports `mergeable: MERGEABLE`.
+
+- On Windows, `GIT_ASKPASS` must be a native path (`C:/...`), not `/tmp/...` —
+  native git cannot spawn an MSYS path. A push whose tree changes upstream
+  workflow files can be rejected for a missing token scope; fix it with
+  `gh auth refresh -h github.com -s workflow` (device flow). The git refs REST
+  endpoints return 404 on forks, so update branches with `git push`, not the API.
+  Clear a stale `GH_TOKEN` from the shell before using the refreshed credentials.
+
 - `version:` in the catalog is a human label only; update detection compares
   `sha:`. Keep the label accurate anyway.
 
